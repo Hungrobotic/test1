@@ -1,0 +1,976 @@
+\documentclass{article}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{mathtools}
+\usepackage[utf8]{inputenc}
+\usepackage[vietnamese]{babel}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+% % Hỗ trợ tiếng Việt
+% % \usepackage[utf8]{inputenc}
+% \usepackage[T1]{fontenc}
+% % \usepackage[vietnamese]{babel}
+% \usepackage{vntex}
+% \usepackage[vietnamese=nohyphenation]{hyphsubst}
+
+\newtheorem{theorem}{Định lý}
+\newtheorem{proposition}[theorem]{Mệnh đề}
+\newtheorem{lemma}[theorem]{Bổ đề}
+\newtheorem{corollary}[theorem]{Hệ quả}
+\newtheorem{definition}{Định nghĩa}
+\newtheorem{remark}{Nhận xét}
+\newtheorem{example}{Ví dụ}
+
+\title{Điều khiển vật cứng đi theo quỹ đạo định trước bằng lực đẩy}
+\date{}
+
+\begin{document}
+\maketitle
+
+
+\section{Giới thiệu}
+
+Bài toán điều khiển vật cứng đi theo một quỹ đạo định trước (path tracking) bằng lực đẩy (pushing only) có nhiều ứng dụng quan trọng trong robot thao tác đồ vật. Ví dụ, khi robot cần di chuyển các vật nặng hoặc cồng kềnh mà không thể nắm chặt, việc sử dụng lực đẩy là một phương pháp hiệu quả. Bài toán này đặt ra nhiều thách thức do:
+
+\begin{itemize}
+    \item Tương tác phức tạp giữa vật và bề mặt thông qua lực ma sát.
+    \item Ràng buộc về các lực đẩy (không thể kéo vật).
+    \item Giới hạn ma sát tiếp tuyến (friction cone).
+    \item Tính chất phi tuyến và tính phi holonomic của hệ thống.
+\end{itemize}
+
+
+\section{Mô hình toán học chi tiết}
+
+\subsection{Không gian cấu hình và động lực học}
+
+Cấu hình của một vật cứng trên mặt phẳng được đặc trưng bởi vector:
+\begin{equation}
+\mathbf{q} = [x, y, \theta]^T \in \mathbb{R}^2 \times \mathbb{S}^1
+\end{equation}
+trong đó $(x,y)$ là tọa độ tâm khối lượng và $\theta$ là góc của vật.
+
+Động lực học đầy đủ của vật cứng trên mặt phẳng tuân theo:
+\begin{equation}
+M\ddot{\mathbf{q}} + B\dot{\mathbf{q}} = \mathbf{w}
+\end{equation}
+trong đó:
+\begin{itemize}
+    \item $M \in \mathbb{R}^{3 \times 3}$ là ma trận quán tính, thường có dạng đường chéo với $M = \text{diag}(m, m, J)$ với $m$ là khối lượng và $J$ là moment quán tính.
+    \item $B \in \mathbb{R}^{3 \times 3}$ là ma trận ma sát, thường là ma trận đường chéo.
+    \item $\mathbf{w} = [F_x, F_y, \tau]^T \in \mathbb{R}^3$ là vector tổng hợp của lực và moment tác dụng lên vật (gọi là wrench).
+\end{itemize}
+
+\subsection{Mô hình cận tĩnh (quasi-static model)}
+
+Trong nhiều ứng dụng thực tế, ma sát giữa vật và bề mặt rất lớn và vận tốc di chuyển tương đối thấp. Trong điều kiện này, mô hình cận tĩnh trở nên phù hợp hơn so với mô hình động học đầy đủ. Từ phương trình (2), ta có:
+\begin{equation}
+\ddot{\mathbf{q}} = M^{-1}\mathbf{w} - M^{-1}B\dot{\mathbf{q}}
+\end{equation}
+
+Khi ma sát $B$ rất lớn khiến quán tính trở nên không đáng kể. Khi đó, vận tốc của vật nhanh chóng đạt đến trạng thái cân bằng tức là gia tốc ngay lập tức bằng 0 khi dừng tác dụng lực. Vì vậy:
+\begin{equation}
+M^{-1}\mathbf{w} - M^{-1}B\dot{\mathbf{q}} \approx 0
+\end{equation}
+
+Từ đó, ta có:
+\begin{equation}
+M^{-1}B\dot{\mathbf{q}} \approx M^{-1}\mathbf{w}
+\end{equation}
+
+Suy ra:
+\begin{equation}
+\dot{\mathbf{q}} = B^{-1}\mathbf{w} 
+\end{equation}
+
+
+Mô hình cận tĩnh (6) cho thấy mối quan hệ tuyến tính giữa wrench tác dụng và vận tốc của vật.
+
+\subsection{Mô hình lực đẩy và ma sát}
+
+\begin{figure}[h]
+    \centering 
+    \includegraphics[width=1\textwidth]{image/1.pdf}
+    \caption{1}
+    \label{fig:1} 
+\end{figure}
+
+Xét một lực đẩy $\mathbf{f}_i$ tác dụng tại điểm tiếp xúc thứ $i$ trên vật. Lực này có thể được phân tích thành thành phần pháp tuyến và tiếp tuyến:
+\begin{equation}
+\mathbf{f}_i = \alpha_i \mathbf{n}_i + \beta_i \mathbf{t}_i
+\end{equation}
+trong đó:
+\begin{itemize}
+    \item $\mathbf{n}_i = [n_{ix}, n_{iy}]^T$ là vector pháp tuyến đơn vị, với $\|\mathbf{n}_i\| = 1$
+    \item $\mathbf{t}_i =[t_{ix}, t_{iy}]^T  = [-n_{iy}, n_{ix}]^T$ là vector tiếp tuyến đơn vị, vuông góc với $\mathbf{n}_i$
+    \item $\alpha_i > 0$ là độ lớn của lực pháp tuyến (luôn dương vì ta xét lực đẩy)
+    \item $\beta_i$ là độ lớn của lực ma sát tiếp tuyến
+\end{itemize}
+
+Định nghĩa mối quan hệ giữa lực pháp tuyến và lực ma sát được xác định bởi mô hình ma sát Coulomb:
+\begin{equation}
+|\beta_i| \leq \mu_i \alpha_i
+\end{equation}
+trong đó $\mu_i$ là hệ số ma sát tại điểm tiếp xúc thứ $i$.
+
+Ràng buộc (8) xác định một nón ma sát (friction cone) mà trong đó lực tiếp xúc phải nằm trong nón này để tuân theo định luật ma sát Coulomb.
+
+\subsection{Tính toán wrench từ lực đẩy}
+
+Xét lực đẩy $\mathbf{f}_i$ tác dụng tại điểm $P_i$ có vector vị trí tương đối $\mathbf{r}_i = [r_{ix}, r_{iy}]^T$ so với tâm khối lượng. Wrench sinh ra bởi lực này được tính:
+\begin{align}
+\mathbf{w}_i &= \begin{bmatrix} f_{ix} \\ f_{iy} \\ \mathbf{r}_i \times \mathbf{f}_i \end{bmatrix} \\
+&= \begin{bmatrix} \alpha_i n_{ix} + \beta_i (-n_{iy}) \\ \alpha_i n_{iy} + \beta_i n_{ix} \\ r_{ix}(\alpha_i n_{iy} + \beta_i n_{ix}) - r_{iy}(\alpha_i n_{ix} - \beta_i n_{iy}) \end{bmatrix}
+\end{align}
+
+Phần moment của wrench có thể viết lại thành:
+\begin{align}
+\tau_i &= r_{ix}(\alpha_i n_{iy} + \beta_i n_{ix}) - r_{iy}(\alpha_i n_{ix} - \beta_i n_{iy}) \\
+&= \alpha_i(r_{ix}n_{iy} - r_{iy}n_{ix}) + \beta_i(r_{ix}n_{ix} + r_{iy}n_{iy})
+\end{align}
+
+Để đơn giản hóa biểu thức, ta đặt:
+\begin{align}
+A_i &= r_{ix}n_{iy} - r_{iy}n_{ix} \\
+B_i &= r_{ix}n_{ix} + r_{iy}n_{iy}
+\end{align}
+
+Khi đó, moment có thể viết gọn là:
+\begin{equation}
+\tau_i = \alpha_i A_i + \beta_i B_i
+\end{equation}
+
+Hệ số $A_i$ có ý nghĩa vật lý quan trọng:
+\begin{itemize}
+    \item $A_i$ là tích có hướng (cross product) của $\mathbf{r}_i$ và $\mathbf{n}_i$ bằng 0 khi $\mathbf{r}_i$ song song với $\mathbf{n}_i$
+    \item Dấu của $A_i$ xác định chiều của moment quay tạo ra bởi thành phần pháp tuyến
+\end{itemize}
+
+Hệ số $B_i$ cũng có ý nghĩa vật lý:
+\begin{itemize}
+    \item $B_i$ là tích vô hướng (dot product) của $\mathbf{r}_i$ và $\mathbf{n}_i$
+    \item $B_i$ xác định ảnh hưởng của thành phần ma sát đến moment. Khi $B_i$ lớn, lực ma sát tiếp tuyến tạo moment lớn
+\end{itemize}
+
+\subsection{Ma trận Grasp và quan hệ wrench-lực}
+
+\subsubsection{Không gian tham số và không gian wrench}
+
+Để phân tích một cách có hệ thống, ta định nghĩa:
+\begin{itemize}
+    \item \textbf{Không gian tham số lực:} $\mathcal{X} = \{[\alpha_1, \beta_1, \alpha_2, \beta_2, \ldots, \alpha_n, \beta_n]^T \in \mathbb{R}^{2n}\}$
+    \item \textbf{Không gian wrench:} $\mathcal{W} = \{\mathbf{w} = [F_x, F_y, \tau]^T \in \mathbb{R}^3\}$
+\end{itemize}
+
+\subsubsection{Ma trận Grasp mở rộng}
+
+Ma trận quan hệ giữa tham số lực và wrench, gọi là ma trận Grasp mở rộng $G \in \mathbb{R}^{3 \times 2n}$, được xác định:
+\begin{equation}
+G = \begin{bmatrix}
+n_{1x} & -n_{1y} & n_{2x} & -n_{2y} & \cdots & n_{nx} & -n_{ny} \\
+n_{1y} & n_{1x} & n_{2y} & n_{2x} & \cdots & n_{ny} & n_{nx} \\
+A_1 & B_1 & A_2 & B_2 & \cdots & A_n & B_n
+\end{bmatrix}
+\end{equation}
+
+Mối quan hệ wrench-lực được biểu diễn đơn giản:
+\begin{equation}
+\mathbf{w} = G\mathbf{x}
+\end{equation}
+với $\mathbf{x} = [\alpha_1, \beta_1, \alpha_2, \beta_2, \ldots, \alpha_n, \beta_n]^T \in \mathbb{R}^{2n}$ là vector tham số lực.
+
+\subsection{Không gian wrench khả thi}
+
+Các ràng buộc friction cone giới hạn không gian tham số lực và do đó giới hạn không gian wrench có thể tạo ra.
+
+\begin{definition}[Không gian tham số khả thi]
+Không gian tham số khả thi $\mathcal{X}_f$ là tập hợp tất cả các tham số lực thỏa mãn ràng buộc friction cone:
+\begin{equation}
+\mathcal{X}_f = \{[\alpha_1, \beta_1, \alpha_2, \beta_2, \ldots, \alpha_n, \beta_n]^T \in \mathbb{R}^{2n} : \alpha_i > 0, |\beta_i| \leq \mu_i\alpha_i, \forall i=1,2,...,n\}
+\end{equation}
+\end{definition}
+
+\begin{definition}[Không gian wrench khả thi]
+Không gian wrench khả thi $\mathcal{W}_f$ là tập hợp tất cả các wrench có thể tạo ra bởi các lực đẩy thỏa mãn ràng buộc friction cone:
+\begin{equation}
+\mathcal{W}_f = \{\mathbf{w} \in \mathbb{R}^3 : \mathbf{w} = G\mathbf{x}, \mathbf{x} \in \mathcal{X}_f\}
+\end{equation}
+\end{definition}
+
+\begin{lemma}
+Không gian wrench khả thi $\mathcal{W}_f$ là một tập lồi và đóng trong $\mathbb{R}^3$ để có thể sử dụng các tính chất chiếu lên trong không gian lồi.
+\end{lemma}
+
+\begin{proof}
+Để chứng minh $\mathcal{W}_f$ là tập lồi:
+
+     Xét $\mathbf{w}_1, \mathbf{w}_2 \in \mathcal{W}_f$ và $\lambda \in [0,1]$.
+     
+     Tồn tại $\mathbf{x}_1, \mathbf{x}_2 \in \mathcal{X}_f$ sao cho $\mathbf{w}_1 = G\mathbf{x}_1$ và $\mathbf{w}_2 = G\mathbf{x}_2$.
+     
+     Ta có: $\lambda\mathbf{w}_1 + (1-\lambda)\mathbf{w}_2 = G(\lambda\mathbf{x}_1 + (1-\lambda)\mathbf{x}_2)$
+     
+     Cần chứng minh $\lambda\mathbf{x}_1 + (1-\lambda)\mathbf{x}_2 \in \mathcal{X}_f$
+     Vì $\alpha_i^{(j)} > 0$ và $|\beta_i^{(j)}| \leq \mu_i\alpha_i^{(j)}$ với $j=1,2$ và $i=1,2,...,n$:
+    \begin{align}
+    \lambda\alpha_i^{(1)} + (1-\lambda)\alpha_i^{(2)} &> 0 \\
+    |\lambda\beta_i^{(1)} + (1-\lambda)\beta_i^{(2)}| &\leq \lambda|\beta_i^{(1)}| + (1-\lambda)|\beta_i^{(2)}| \\
+    &\leq \lambda\mu_i\alpha_i^{(1)} + (1-\lambda)\mu_i\alpha_i^{(2)} \\
+    &= \mu_i(\lambda\alpha_i^{(1)} + (1-\lambda)\alpha_i^{(2)})
+    \end{align}
+     Vậy $\lambda\mathbf{x}_1 + (1-\lambda)\mathbf{x}_2 \in \mathcal{X}_f$, nên $\lambda\mathbf{w}_1 + (1-\lambda)\mathbf{w}_2 \in \mathcal{W}_f$.
+
+Để chứng minh $\mathcal{W}_f$ là tập đóng:
+
+     $\mathcal{X}_f^* = \{\mathbf{x} \in \mathbb{R}^{2n} : \alpha_i \geq 0, |\beta_i| \leq \mu_i\alpha_i, i=1,2,...,n\}$ là tập đóng trong $\mathbb{R}^{2n}$.
+     
+     $G$ là ánh xạ tuyến tính liên tục, nên $G(\mathcal{X}_f^*)$ là tập đóng.
+     
+     Ta có $\mathcal{W}_f = G(\mathcal{X}_f)$, và $\mathcal{X}_f$ chỉ khác $\mathcal{X}_f^*$ ở điều kiện $\alpha_i > 0$ thay vì $\alpha_i \geq 0$.
+     
+     Khi $\alpha_i = 0$, ta bắt buộc $\beta_i = 0$ theo ràng buộc friction cone, nên điểm tiếp xúc không tạo wrench.
+     
+     Do đó $\mathcal{W}_f = G(\mathcal{X}_f^*)$ là tập đóng.
+
+\end{proof}
+
+
+\section{Phân tích Khả năng Điều khiển và Ổn định}
+\subsection{Định nghĩa bài toán Path Tracking}
+\begin{definition}[Path Tracking]
+Cho một quỹ đạo tham chiếu $\mathcal{P}: [0,1] \rightarrow \mathbb{R}^2 \times \mathbb{S}^1$ được định nghĩa:
+\begin{equation}
+\mathcal{P}(s) = [x_d(s), y_d(s), \theta_d(s)]^T, s \in [0,1]
+\end{equation}
+
+Bài toán Path Tracking là tìm luật điều khiển (các lực đẩy) sao cho:
+\begin{equation}
+\lim_{t \rightarrow \infty} \|\mathbf{q}(t) - \mathcal{P}(s(t))\| = 0
+\end{equation}
+trong đó $s(t)$ là tham số quỹ đạo tại thời điểm $t$.
+\end{definition}
+
+\begin{definition}[Sai số theo dõi]
+Nếu chỉ xét tại 1 thời điểm thì bài toán sẽ trở thành:
+
+Hệ thống được mô tả bởi phương trình động lực học quasi-static:
+\begin{equation}
+\dot{\mathbf{q}} = B^{-1} \mathbf{w},
+\end{equation}
+
+Wrench được tạo bởi:
+\begin{equation}
+\mathbf{w} = G \mathbf{x},
+\end{equation}
+
+
+Sai số được định nghĩa là:
+\begin{equation}
+e = \mathbf{q} - \mathbf{q}_d,
+\end{equation}
+với  $\quad \mathbf{q}_d = \mathcal{P}(s(t))$  và  \(\dot{\mathbf{q}}_d = B^{-1} \mathbf{w}_d\) là vận tốc mong muốn.
+
+\end{definition}
+
+\subsection{Hàm Lyapunov và điều kiện ổn định}
+
+Để phân tích tính ổn định của hệ thống theo dõi quỹ đạo, ta sử dụng lý thuyết ổn định Lyapunov.
+
+Định nghĩa hàm năng lượng Lyapunov dựa trên sai số theo dõi:
+\begin{equation}
+V(\mathbf{e}) = \frac{1}{2}\mathbf{e}^T P \mathbf{e}
+\end{equation}
+trong đó $P$ là ma trận đối xứng xác định dương.
+
+Khi lấy đạo hàm theo thời gian của hàm Lyapunov:
+\begin{equation}
+\dot{V}(\mathbf{e}) = \frac{1}{2}\left(\dot{\mathbf{e}}^T P \mathbf{e} + \mathbf{e}^T P \dot{\mathbf{e}}\right)
+\end{equation}
+
+$\dot{\mathbf{e}}^T P \mathbf{e}$ là một số vô hướng nên với mọi số vô hướng $a$, ta có $a^T = a$
+    
+Áp dụng phép chuyển vị:
+    \begin{equation}
+    (\dot{\mathbf{e}}^T P \mathbf{e})^T = \mathbf{e}^T P^T \dot{\mathbf{e}}
+    \end{equation}
+    
+Do $P$ là ma trận đối xứng: $P^T = P$, nên:
+    \begin{equation}
+    \mathbf{e}^T P^T \dot{\mathbf{e}} = \mathbf{e}^T P \dot{\mathbf{e}}
+    \end{equation}
+    
+Vì vậy:
+    \begin{equation}
+    \dot{\mathbf{e}}^T P \mathbf{e} = \mathbf{e}^T P \dot{\mathbf{e}}
+    \end{equation}
+    
+    \begin{equation}
+    \dot{V}(\mathbf{e}) = \frac{1}{2}\left(\mathbf{e}^T P \dot{\mathbf{e}} + \mathbf{e}^T P \dot{\mathbf{e}}\right) = \mathbf{e}^T P \dot{\mathbf{e}}
+    \end{equation}
+
+
+Điều kiện để hệ thống ổn định theo tiêu chí Lyapunov là $\dot{V}(\mathbf{e}) < 0$ với mọi $\mathbf{e} \neq \mathbf{0}$.
+
+\subsection{Phân tích Trường hợp một Lực đẩy (n=1)}
+
+\begin{proof}
+Mục tiêu của chúng ta là chứng minh rằng một lực đẩy đơn lẻ không đủ để đảm bảo tính ổn định tiệm cận cho bài toán bám quỹ đạo. Để làm điều này, ta sẽ chứng minh rằng \textbf{luôn tồn tại ít nhất một trạng thái sai số $\mathbf{e} \neq \mathbf{0}$ mà với nó, đạo hàm của hàm Lyapunov $\dot{V}(\mathbf{e})$ không thể được làm cho âm} bằng bất kỳ lực đẩy hợp lệ nào.
+
+\vspace{1em}
+\noindent\textbf{1. Thiết lập kịch bản phân tích}
+
+Không mất tính tổng quát, ta giả sử rằng:
+\begin{itemize}
+    \item \textbf{Sai số:} Vật đang ở một vị trí sai lệch $\mathbf{e}(t) = [e_x, e_y, e_\theta]^T \neq \mathbf{0}$.
+    \item  \textbf{các ma trận $P$ và $B$} có dạng đường chéo để dễ phân tích: $P=\text{diag}(p_t, p_t, p_\theta)$ và $B=\text{diag}(m'_t, m'_t, m'_\theta)$.
+\end{itemize}
+Khi đó, đạo hàm của hàm Lyapunov (phương trình (35) trong tài liệu) trở thành:
+\begin{equation}
+    \dot{V}(\mathbf{e}) = \mathbf{e}^T P B^{-1}\mathbf{w}
+\end{equation}
+
+\begin{equation}
+    \dot{V}(\mathbf{e}) = \frac{p_t}{m'_t}(e_x F_x + e_y F_y) + \frac{p_\theta}{m'_\theta}e_\theta \tau
+\end{equation}
+
+\vspace{1em}
+\noindent\textbf{2. Biểu diễn $\dot{V}(\mathbf{e})$ theo các tham số điều khiển}
+
+Thay thế các thành phần của wrench $F_x, F_y, \tau$ bằng các tham số lực $\alpha$ (pháp tuyến) và $\beta$ (tiếp tuyến), ta có:
+\begin{equation}
+    \dot{V}(\mathbf{e}) = \frac{p_t}{m'_t}(e_x(\alpha n_x - \beta n_y) + e_y(\alpha n_y + \beta n_x)) + \frac{p_\theta}{m'_\theta}e_\theta(\alpha A + \beta B)
+\end{equation}
+Bây giờ, ta nhóm các số hạng theo $\alpha$ và $\beta$. Hai tham số này là những gì bộ điều khiển có thể thay đổi.
+\begin{equation}
+    \dot{V}(\mathbf{e}) = \alpha \underbrace{\left[ \frac{p_t}{m'_t}(e_x n_x + e_y n_y) + \frac{p_\theta}{m'_\theta}e_\theta A \right]}_{C_\alpha} + \beta \underbrace{\left[ \frac{p_t}{m'_t}(-e_x n_y + e_y n_x) + \frac{p_\theta}{m'_\theta}e_\theta B \right]}_{C_\beta}
+\end{equation}
+Đơn giản biểu thức:
+\begin{equation}
+    \dot{V}(\mathbf{e}) = \alpha C_\alpha + \beta C_\beta
+\end{equation}
+
+Trong đó, $C_\alpha$ và $C_\beta$ là các hệ số phụ thuộc vào trạng thái sai số $\mathbf{e}$ của hệ thống.
+
+\vspace{1em}
+Giả sử
+$$ \mathbf{e} = [n_x, n_y, 0]^T $$
+Với lựa chọn này, ta tính các hệ số $C_\alpha$ và $C_\beta$:
+\begin{itemize}
+    \item $C_\alpha = \frac{p_t}{m'_t}(n_x \cdot n_x + n_y \cdot n_y) + \frac{p_\theta}{m'_\theta}(0 \cdot A) = \frac{p_t}{m'_t}(n_x^2 + n_y^2) = \frac{p_t}{m'_t}$.
+    Vì $p_t, m'_t > 0$, ta có $C_\alpha > 0$.
+    \item $C_\beta = \frac{p_t}{m'_t}(-n_x n_y + n_y n_x) + \frac{p_\theta}{m'_\theta}(0 \cdot B) = 0$.
+\end{itemize}
+Thay các giá trị này vào biểu thức của $\dot{V}(\mathbf{e})$, ta có:
+$$ \dot{V}(\mathbf{e}) = \alpha C_\alpha + \beta \cdot 0 = \alpha C_\alpha = \alpha \frac{p_t}{m'_t} $$
+Vì $\alpha > 0$ theo định nghĩa của lực đẩy, rõ ràng $\dot{V}(\mathbf{e})$ luôn luôn dương.
+
+Ta chỉ ra rằng, tồn tại một trạng thái sai số rất đơn giản ($\mathbf{e} = [n_x, n_y, 0]^T$) mà ở đó, bất kỳ lực đẩy hợp lệ nào được áp dụng cũng sẽ làm tăng hàm Lyapunov thay vì giảm nó.
+
+Do đó, một lực đẩy đơn \textbf{không thể đảm bảo} tính ổn định tiệm cận cho bài toán bám quỹ đạo tổng quát.
+\end{proof}
+
+\subsection{Phân tích ổn định với nhiều lực đẩy}
+
+\begin{theorem}
+Với $n \geq 2$ lực đẩy, điều kiện cần và đủ để đảm bảo khả năng ổn định theo tiêu chí Lyapunov cho bài toán path tracking là hệ thống phải có khả năng tạo moment hai chiều, tức là tồn tại $i, j$ sao cho $A_i \cdot A_j < 0$.
+\end{theorem}
+
+\begin{proof}
+
+\subsubsection*{Phần 1 - Chứng minh điều kiện cần}
+
+
+Ta cần chứng minh rằng khả năng tạo moment hai chiều là điều kiện cần để hệ thống ổn định. Ta sẽ sử dụng phương pháp chứng minh phản chứng.
+
+\vspace{1em}
+Giả sử hệ thống không có khả năng tạo moment hai chiều, tức là $A_i \cdot A_j \ge 0$ với mọi $i, j$. Điều này có nghĩa là tất cả các hệ số $A_i$ đều cùng dấu (hoặc bằng không).
+Ta sẽ chọn một sai số thuần túy về hướng quay, đòi hỏi một moment điều khiển ngược chiều với chiều mà hệ thống có thể dễ dàng tạo ra. Cụ thể, ta chọn một sai số hướng dương, $\mathbf{e} = [0, 0, e_\theta]^T$ với $e_\theta > 0$ đồng thời sẽ cho $A_i > 0$ tức là object chỉ có thể quay thuận theo chiều kim đồng hồ. Một bộ điều khiển ổn định sẽ cần tạo ra một moment tổng hợp $\tau$ có dấu âm ($\tau < 0$) để khắc phục sai số này.
+
+
+Với sai số $\mathbf{e} = [0, 0, e_\theta]^T$, đạo hàm của hàm Lyapunov có dạng:
+$$ \dot{V}(\mathbf{e}) = \frac{p_\theta}{m'_\theta}e_\theta \tau $$
+Vì $\frac{p_\theta}{m'_\theta} > 0$ và ta đã chọn $e_\theta > 0$, dấu của $\dot{V}(\mathbf{e})$ hoàn toàn phụ thuộc vào dấu của moment tổng hợp $\tau$. Để hệ thống ổn định ($\dot{V}(\mathbf{e}) < 0$), bộ điều khiển \textbf{bắt buộc} phải có khả năng tạo ra một moment tổng hợp âm ($\tau < 0$).
+
+\vspace{1em}
+
+Moment tổng hợp $\tau$ được tạo ra bởi tất cả $n$ lực đẩy là:
+$$ \tau = \sum_{i=1}^{n} \tau_i = \sum_{i=1}^{n} (\alpha_i A_i + \beta_i B_i) $$
+\begin{itemize}
+    \item \textbf{Moment do lực pháp tuyến ($\sum \alpha_i A_i$):} Theo giả thiết phản chứng, mọi $A_i \ge 0$. Vì lực đẩy luôn có $\alpha_i > 0$, thành phần này luôn không âm: $\sum \alpha_i A_i \ge 0$.
+    \item \textbf{Moment do lực ma sát ($\sum \beta_i B_i$):} Đây là hy vọng duy nhất để tạo ra moment âm. Lực ma sát bị giới hạn bởi $|\beta_i| \le \mu_i \alpha_i$.
+\end{itemize}
+Để tạo ra moment âm bộ điều khiển sẽ phải lựa chọn các giá trị $\beta_i$ một cách tối ưu. Giá trị nhỏ nhất mà thành phần $\beta_i B_i$ có thể đạt được là $-\mu_i \alpha_i |B_i|$.
+
+Do đó
+$$ \tau_{\text{min}} = \sum_{i=1}^{n} (\alpha_i A_i) - \sum_{i=1}^{n} (\mu_i \alpha_i |B_i|) = \sum_{i=1}^{n} \alpha_i (A_i - \mu_i |B_i|) $$
+
+\vspace{1em}
+
+
+
+Hệ thống có thể ổn định nếu nó có thể tạo ra moment âm cần thiết, tức là nếu $\tau_{\text{min}} \le 0$
+$$ \sum_{i=1}^{n} \alpha_i (A_i - \mu_i |B_i|) \le 0 $$
+$$ A_i - \mu_i |B_i| \le 0 \quad \Leftrightarrow \quad A_i \le \mu_i |B_i| $$
+Đây là một điều kiện hoàn toàn có thể xảy ra, nó phụ thuộc vào vị trí đặt lực sao cho $A_i$ có giá trị cực nhỏ tức là gần tâm khối lượng nhất có thể. Cũng dễ hình dung vì khi hình nón friction cone bao trùm  COM, hoàn toàn ta có thể tạo được moment âm dương 2 chiều. Tuy nhiên khi chọn vị trí đặt lực tại đó thì moment tạo ra sẽ rất nhỏ muốn vật đổi hướng góc lớn sẽ rất khó khăn. Vì vậy đa phần vị trí đặt lực sẽ đặt xa tâm COM nhất để tạo được moment tối đa điều đó dẫn đến việc $\tau_{\text{min}} \ge 0$ và hệ thống mất ổn định. Hệ thống không thể tạo ra moment âm để khắc phục sai số $e_\theta > 0$
+
+
+
+
+
+
+\textbf{Phần 2 - Chứng minh điều kiện đủ:}
+
+Xét ma trận Grasp mở rộng cho hai lực $i$ và $j$ có $A_i \cdot A_j < 0$:
+\begin{equation}
+G_{i,j} = \begin{bmatrix}
+n_{ix} & -n_{iy} & n_{jx} & -n_{jy} \\
+n_{iy} & n_{ix} & n_{jy} & n_{jx} \\
+A_i & B_i & A_j & B_j
+\end{bmatrix}
+\end{equation}
+
+Để chứng minh ba hàng của ma trận $G_{i,j}$ độc lập tuyến tính, ta xét phương trình:
+\begin{equation}
+c_1 \cdot \text{hàng}_1 + c_2 \cdot \text{hàng}_2 + c_3 \cdot \text{hàng}_3 = \mathbf{0}
+\end{equation}
+
+Viết ra các phương trình thành phần:
+\begin{align}
+c_1 n_{ix} - c_2 n_{iy} + c_3 A_i &= 0 \\
+c_1 (-n_{iy}) + c_2 n_{ix} + c_3 B_i &= 0 \\
+c_1 n_{jx} - c_2 n_{jy} + c_3 A_j &= 0 \\
+c_1 (-n_{jy}) + c_2 n_{jx} + c_3 B_j &= 0
+\end{align}
+
+Từ hai phương trình đầu, ta có:
+\begin{align}
+c_1 n_{ix} - c_2 n_{iy} &= -c_3 A_i \\
+c_1 (-n_{iy}) + c_2 n_{ix} &= -c_3 B_i
+\end{align}
+
+Giải hệ phương trình này cho $c_1$ và $c_2$:
+\begin{align}
+c_1 &= \frac{-c_3(A_i n_{ix} + B_i n_{iy})}{n_{ix}^2 + n_{iy}^2} \\
+c_2 &= \frac{-c_3(A_i n_{iy} - B_i n_{ix})}{n_{ix}^2 + n_{iy}^2}
+\end{align}
+
+Tương tự, từ hai phương trình sau, ta có:
+\begin{align}
+c_1 &= \frac{-c_3(A_j n_{jx} + B_j n_{jy})}{n_{jx}^2 + n_{jy}^2} \\
+c_2 &= \frac{-c_3(A_j n_{jy} - B_j n_{jx})}{n_{jx}^2 + n_{jy}^2}
+\end{align}
+
+Từ phương trình 51 đến 54 vì hai lực $i$ và $j$ có vị trí và hướng khác nhau, nên từ điều kiện tương thích của các phương trình trên, ta có $c_3 = 0$, và từ đó suy ra $c_1 = c_2 = 0$. Vậy các hàng của $G_{i,j}$ độc lập tuyến tính, và ma trận $G_{i,j}$ có hạng bằng 3. Từ đó với số lượng lực lớn hơn thì sẽ luôn đảm bảo ma trận $G_{i,j}$ có hạng bằng 3
+
+
+
+Khi ma trận Grasp có hạng đầy đủ, với mọi wrench mong muốn $w_{\text{desired}} \in \mathbb{R}^3$, luôn tồn tại một vector tham số lực $x$ sao cho $Gx = w_{\text{desired}}$. Tuy nhiên, $x$ có thể không thỏa mãn ràng buộc ma sát.
+
+Xét phương trình đạo hàm của $V(e)$ ta có:
+
+\begin{equation}
+\dot{V}(e) = e^T P \dot{e} = e^T P (\dot{\mathbf{q}} - \dot{\mathbf{q}}_d) = e^T P (B^{-1} \mathbf{w} - \dot{\mathbf{q}}_d).
+\end{equation}
+Thay \(\mathbf{w} = G \mathbf{x}\):
+\begin{equation}
+\dot{V}(e) = e^T P B^{-1} G \mathbf{x} - e^T P \dot{\mathbf{q}}_d.
+\end{equation}
+Đặt \(A = P B^{-1} G\), ta có:
+\begin{equation}
+\dot{V}(e) = e^T A \mathbf{x} - e^T P \dot{\mathbf{q}}_d.
+\end{equation}
+
+% \section{Thiết kế luật điều khiển}
+Để giảm sai số, ta sẽ thiết kế một luât điều khiển để $\dot{\mathbf{q}}$ tiến gần $\dot{\mathbf{q}}_d$. Một cách tiếp cận là chọn:
+$$\mathbf{w} = \mathbf{w}_d - K e$$
+
+$\mathbf{w}_d$ = Wrench mong muốn để đạt được vận tốc $\dot{\mathbf{q}}_d$.
+
+$K$: Ma trận gain dương xác định.
+
+
+ \textbf{Trường hợp lý tưởng: $\mathbf{w} = \mathbf{w}_d - K e \in W_f$ tức là vùng wrench space bao trùm toàn bộ hướng mà vật di chuyển}
+ 
+Nếu $\mathbf{w}_d - K e \in W_f$, ta có thể chọn $\mathbf{x} \geq 0$ sao cho:
+$$\mathbf{w} = G \mathbf{x} = \mathbf{w}_d - K e$$
+Thay vào:
+$$\dot{\mathbf{q}} = B^{-1} (\mathbf{w}_d - K e) = \dot{\mathbf{q}}_d - B^{-1} K e$$
+$$\dot{e} = \dot{\mathbf{q}} - \dot{\mathbf{q}}_d = -B^{-1} K e$$
+$$\dot{V}(e) = e^T P (-B^{-1} K e) = -e^T P B^{-1} K e$$
+Nếu $P B^{-1} K > 0$, thì $\dot{V}(e) < 0$ khi $e \neq 0$, đảm bảo tính ổn định tiệm cận toàn cục.
+
+
+\textbf{Trường hợp xấp xỉ: $\mathbf{w}_d - K e \notin W_f$ Vùng wrench space chưa bao phủ được toàn bộ không gian 3D, vẫn có vùng wrench mong muốn nằm ngoài không gian wrench có thể cung câp được}
+
+Nếu $\mathbf{w}_d - K e \notin W_f$, ta không thể chọn $\mathbf{w} = \mathbf{w}_d - K e$. Thay vào đó, ta tìm $\mathbf{w} \in W_f$ xấp xỉ $\mathbf{w}_d - K e$, thường thông qua bài toán tối ưu:
+$$\mathbf{x}^* = \arg\min_{\mathbf{x} \geq 0} \| G^T \mathbf{x} - (\mathbf{w}_d - K e) \|^2$$
+Gọi $\mathbf{w}^* = G^T \mathbf{x}^*$ là wrench xấp xỉ. Khi đó:
+$$\mathbf{w}^* = \mathbf{w}_d - K e + \mathbf{\delta}$$
+
+Trong đó $\mathbf{\delta} $ là sai số xấp xỉ, do $\mathbf{w}_d - K e \notin W_f$.
+
+Thay vào phương trình động lực học:
+$$\dot{\mathbf{q}} = B^{-1} \mathbf{w}^* = B^{-1} (\mathbf{w}_d - K e + \mathbf{\delta}) = \dot{\mathbf{q}}_d - B^{-1} K e + B^{-1} \mathbf{\delta}$$
+$$\dot{e} = \dot{\mathbf{q}} - \dot{\mathbf{q}}_d = -B^{-1} K e + B^{-1} \mathbf{\delta}$$
+Đạo hàm của hàm Lyapunov:
+$$\dot{V}(e) = e^T P \dot{e} = e^T P (-B^{-1} K e + B^{-1} \mathbf{\delta}) = -e^T P B^{-1} K e + e^T P B^{-1} \mathbf{\delta}$$
+Gọi:
+
+$Q = P B^{-1} K$: Ma trận đối xứng, $Q > 0$.
+$c = e^T P B^{-1} \mathbf{\delta}$:phụ thuộc vào sai số xấp xỉ.
+
+$$\dot{V}(e) = -e^T Q e + c$$
+Điều kiện để $\dot{V} < 0$
+Để hệ thống vẫn ổn định, cần $\dot{V}(e) < 0$ khi $e \neq 0$. Điều này đòi hỏi:
+$$-e^T Q e + c < 0 \quad \text{hoặc} \quad e^T Q e > c$$
+
+$e^T Q e$: Luôn dương vì $Q > 0$, và tăng theo hàm bậc hai của $\|e\|$.
+$c = e^T P B^{-1} \mathbf{\delta}$: Tăng tuyến tính với $\|e\|$, vì $\mathbf{\delta}$ là sai số xấp xỉ, thường bị chặn trong $W_f$.
+
+Vì vậy, khi $\|e\|$ đủ lớn, $e^T Q e$ (bậc hai) sẽ vượt qua $c$ (bậc một), khiến $\dot{V} < 0$. Điều này cho thấy tồn tại một vùng lân cận $e = 0$, nơi $\dot{V} > 0$ có thể xảy ra nếu $\|e\|$ quá nhỏ. Tuy nhiên, ngoài vùng này, $\dot{V} < 0$, đảm bảo sai số $e$ bị chặn trong một tập lồi. Đây là tính ổn định bị chặn (bounded stability).
+
+\textbf{Phân tích tính ổn định}
+
+Giả sử $\mathbf{\delta}$ bị chặn, tức là $\|\mathbf{\delta}\| \leq \delta_{\text{max}}$, vì $\mathbf{w}^*$ và $\mathbf{w}_d - K e$ đều thuộc không gian bị giới hạn bởi $W_f$. Ta có:
+$$|c| = |e^T P B^{-1} \mathbf{\delta}| \leq \|e\| \cdot \|P B^{-1}\| \cdot \|\mathbf{\delta}\| \leq \|e\| \cdot \|P B^{-1}\| \cdot \delta_{\text{max}}$$
+Gọi $\lambda_{\text{min}}(Q)$ là giá trị riêng nhỏ nhất của $Q$. Khi đó:
+$$e^T Q e \geq \lambda_{\text{min}}(Q) \|e\|^2$$
+
+$ e^T Q e $: Đại lượng này đo lường năng lượng của sai số $ e $, được tính bởi ma trận $ Q $ là lực điều khiển giúp kéo hệ thống về trạng thái mong muốn.
+
+$ \lambda_{\text{min}}(Q) \|e\|^2 $: Đây là giới hạn dưới của năng lượng này. Giá trị riêng nhỏ nhất $ \lambda_{\text{min}}(Q) $ cho biết mức độ tối thiểu mà $ Q $ có thể tạo ra.
+
+Để $\dot{V} < 0$:
+$$\lambda_{\text{min}}(Q) \|e\|^2 > \|e\| \cdot \|P B^{-1}\| \cdot \delta_{\text{max}}$$
+$$\|e\| > \frac{\|P B^{-1}\| \cdot \delta_{\text{max}}}{\lambda_{\text{min}}(Q)}$$
+Điều này cho thấy tồn tại một vùng lân cận $e$ xấp xỉ bằng 0, nơi $\dot{V} > 0$ có thể xảy ra nếu $\|e\|$ quá nhỏ. Điều cần làm đó là làm thế nào đó để giảm vùng e lại. Có 2 cách để giảm vùng e là 
+Tăng $\lambda_{\text{min}}(Q)$: Chọn ma trận gain $ K $ sao cho $ Q = P B^{-1} K $ có giá trị riêng lớn hơn, tăng cường lực điều khiển.
+Giảm $\delta_{\text{max}}$: Cải thiện quá trình xấp xỉ $\mathbf{w}^*$ để giảm sai số $\mathbf{\delta}$, ví dụ bằng cách mở rộng không gian wrench space (thêm lực đẩy hoặc điều chỉnh ma trận grasp $ G $) để có thể trở thành không gian $ W_f $ hoàn hảo.
+
+\end{proof}
+
+\begin{corollary}
+Với $n \geq 2$ lực, điều kiện $A_1 \cdot A_2 < 0$ là đủ để đảm bảo khả năng điều khiển vật theo một quỹ đạo tổng quát với sai số hội tụ sâp sỉ về 0 .
+\end{corollary}
+
+\section{Phân tích Đại số của Ma trận Grasp Đầy đủ}
+
+\subsection{Ma trận Gram và Cấu trúc Đại số}
+
+Ma trận Gram $W = GG^T \in \mathbb{R}^{3 \times 3}$ đóng vai trò quan trọng trong phân tích không gian wrench khả thi. Các giá trị riêng của ‘W‘ chính là bình phương độ dài các trục của ellipsoid.:
+
+\begin{equation}
+W = GG^T 
+\end{equation}
+
+Ma trận $W$ có thể được viết chi tiết:
+
+\begin{equation}
+W = \begin{bmatrix}
+\sum_i (n_{ix}^2 + n_{iy}^2) & 0 & \sum_i (n_{ix}A_i - n_{iy}B_i) \\
+0 & \sum_i (n_{ix}^2 + n_{iy}^2) & \sum_i (n_{iy}A_i + n_{ix}B_i) \\
+\sum_i (n_{ix}A_i - n_{iy}B_i) & \sum_i (n_{iy}A_i + n_{ix}B_i) & \sum_i (A_i^2 + B_i^2)
+\end{bmatrix}
+\end{equation}
+
+Với các vector pháp tuyến đơn vị ($\|\mathbf{n}_i\| = 1$), ta có $n_{ix}^2 + n_{iy}^2 = 1$, nên:
+
+\begin{equation}
+W = \begin{bmatrix}
+n & 0 & \sum_i (n_{ix}A_i - n_{iy}B_i) \\
+0 & n & \sum_i (n_{iy}A_i + n_{ix}B_i) \\
+\sum_i (n_{ix}A_i - n_{iy}B_i) & \sum_i (n_{iy}A_i + n_{ix}B_i) & \sum_i (A_i^2 + B_i^2)
+\end{bmatrix}
+\end{equation}
+
+\subsection{Phân rã Giá trị Đơn (SVD) của ma trận Grasp}
+
+Ma trận Grasp đầy đủ với mọi $G \in \mathbb{R}^{3 \times 2n}$ có phân rã giá trị đơn:
+\begin{equation}
+G = U\Sigma V^T
+\end{equation}
+trong đó:
+\begin{itemize}
+    \item $U = [u_1 \; u_2 \; u_3] \in \mathbb{R}^{3 \times 3}$ là ma trận trực giao
+
+    
+    \item $\Sigma\in \mathbb{R}^{3 \times 2n}$ có dạng ma trận đường chéo mở rộng:
+    \begin{equation}
+    \Sigma = 
+    \begin{bmatrix}
+    \sigma_1 & 0 & 0 & 0 & \cdots & 0 \\
+    0 & \sigma_2 & 0 & 0 & \cdots & 0 \\
+    0 & 0 & \sigma_3 & 0 & \cdots & 0
+    \end{bmatrix}
+    \end{equation}
+    với $\sigma_1 \geq \sigma_2 \geq \sigma_3 \geq 0$ là các giá trị đơn của $G$
+    
+    \item $V = [v_1 \; v_2 \; \ldots \; v_{2n}] \in \mathbb{R}^{2n \times 2n}$ là ma trận trực giao.
+\end{itemize}
+
+
+Các giá trị đơn $\sigma_1, \sigma_2, \sigma_3$ có liên quan trực tiếp đến hình dạng của ellipsoid trong không gian wrench. Ma trận Gram là cách cô đọng ma trận G lại chỉ quan tâm đến đường chéo chính ,liên quan đến các giá trị đơn:
+\begin{align}
+W &= GG^T \\
+&= U\Sigma V^T(U\Sigma V^T)^T \\
+&= U\Sigma V^TV\Sigma U^T \\
+&= U\Sigma\Sigma^TU^T \quad \text{(vì $V^TV = I_{2n}$)}
+\end{align}
+
+Phép nhân $\Sigma\Sigma^T$ tạo ra ma trận vuông:
+\begin{equation}
+\Sigma\Sigma^T = 
+\begin{bmatrix}
+\sigma_1 & 0 & 0 & \cdots \\
+0 & \sigma_2 & 0 & \cdots \\
+0 & 0 & \sigma_3 & \cdots
+\end{bmatrix}
+\begin{bmatrix}
+\sigma_1 & 0 & 0 \\
+0 & \sigma_2 & 0 \\
+0 & 0 & \sigma_3 \\
+\vdots & \vdots & \vdots
+\end{bmatrix}
+= 
+\begin{bmatrix}
+\sigma_1^2 & 0 & 0 \\
+0 & \sigma_2^2 & 0 \\
+0 & 0 & \sigma_3^2
+\end{bmatrix}
+\end{equation}
+Do đó:
+\begin{equation}
+W = GG^T = U\text{diag}(\sigma_1^2, \sigma_2^2, \sigma_3^2)U^T
+\end{equation}
+
+\section{Các Chỉ số Chất lượng và Điều kiện Tối ưu}
+
+\subsection{Chỉ số Chất lượng}
+
+\begin{definition}[Chỉ số Thể tích]
+\begin{equation}
+J_V(P) =\sqrt{\det(\mathbf{W})}= \sqrt{\det GG^T)}= \sigma_1 \sigma_2 \sigma_3
+\end{equation}
+\end{definition}
+
+\begin{definition}[Chỉ số Đẳng hướng]
+\begin{equation}
+    J_I = \frac{\sigma_3}{\sigma_1} = \sqrt{\frac{\lambda_{\min}(\mathbf{G}{\mathbf{G}}^T)}{\lambda_{\max}(\mathbf{G}{\mathbf{G}}^T)}} = \frac{1}{\sqrt{\text{cond}(\mathbf{G}{\mathbf{G}}^T)}}
+\end{equation}
+\end{definition}
+
+\begin{definition}[Chỉ số Bán kính]
+\begin{equation}
+J_R = \sigma_3 = \sqrt{\lambda_{\min}(GG^T)}
+\end{equation}
+\end{definition}
+
+
+
+\subsection{Chứng minh các định nghĩa}
+\subsubsection{Chỉ số thể tích}
+Phần này giải thích tại sao chỉ số thể tích $J_V$ được định nghĩa là tích của ba giá trị đơn lớn nhất.
+
+\begin{enumerate}
+    \item \textbf{Wrench Ellipsoid:} Wrench ellipsoid là ảnh của một siêu cầu đơn vị trong không gian đầu vào $\mathbb{R}^{2n}$ qua phép biến đổi tuyến tính $\mathbf{G}$. Kết quả là một hình ellipsoid trong không gian wrench $\mathbb{R}^3$.
+
+    \item \textbf{Các bán trục của Ellipsoid:} Từ Phân rã Giá trị Đơn (SVD), chúng ta biết rằng độ dài các bán trục (semi-axes) của hình ellipsoid này chính là các giá trị riêng của ma trận $\mathbf{G}$. Chúng ta ký hiệu ba giá trị đơn lần lượt là là $\sigma_1, \sigma_2, \sigma_3$.
+
+    \item \textbf{Công thức thể tích Ellipsoid đến chỉ số thể tích} Thể tích $V$ của một hình ellipsoid với các bán trục có độ dài $a, b, c$ được cho bởi công thức:
+    \begin{equation}
+        V = \frac{4}{3}\pi \cdot a \cdot b \cdot c
+    \end{equation}
+    Áp dụng vào trường hợp này, thể tích của wrench ellipsoid là $V = \frac{4}{3}\pi \cdot \sigma_1 \sigma_2 \sigma_3$. Khi định nghĩa một chỉ số chất lượng để tối ưu hóa, chúng ta có thể bỏ qua hằng số $\frac{4}{3}\pi$ vì nó không ảnh hưởng đến vị trí của điểm cực đại. Do đó, chỉ số thể tích được định nghĩa là:
+    \begin{equation}
+        J_V \equiv \sigma_1 \sigma_2 \sigma_3
+    \end{equation}
+\end{enumerate}
+
+\textbf{Chứng minh $\sigma_1\sigma_2\sigma_3 = \sqrt{\det(\mathbf{W})}$}
+
+\textbf{Định nghĩa ma trận Gram:} Ma trận Gram $\mathbf{W}$ được định nghĩa và biến đổi như trên là:
+    \begin{equation}
+        \mathbf{W} = \mathbf{G} {\mathbf{G}}^T= \mathbf{U}(\mathbf{\Sigma}\mathbf{\Sigma}^T)\mathbf{U}^T
+    \end{equation}
+
+    \begin{equation}
+        \det(\mathbf{W}) = \det(\mathbf{U}(\mathbf{\Sigma}\mathbf{\Sigma}^T)\mathbf{U}^T)
+    \end{equation}
+
+    \begin{equation}
+        \det(\mathbf{W}) = \det(\mathbf{U}) \cdot \det(\mathbf{\Sigma}\mathbf{\Sigma}^T) \cdot \det(\mathbf{U}^T)
+    \end{equation}
+
+Vì định thức của một ma trận trực giao bằng 1 hoặc -1. Ta có $\det(\mathbf{U}) \cdot \det(\mathbf{U}^T) = \det(\mathbf{U}\mathbf{U}^T) = \det(\mathbf{I}) = 1$.
+    \begin{equation}
+        \det(\mathbf{W}) = \det(\mathbf{\Sigma}\mathbf{\Sigma}^T)
+    \end{equation}
+
+Ta có:
+$\mathbf{\Sigma}\mathbf{\Sigma}^T$ là một ma trận đường chéo vuông cấp 3:
+    \begin{equation}
+        \mathbf{\Sigma}\mathbf{\Sigma}^T = 
+        \begin{pmatrix}
+        \sigma_1^2 & 0 & 0 \\
+        0 & \sigma_2^2 & 0 \\
+        0 & 0 & \sigma_3^2
+        \end{pmatrix}
+    \end{equation}
+    \begin{equation}
+        \det(\mathbf{\Sigma}\mathbf{\Sigma}^T) = \sigma_1^2 \sigma_2^2 \sigma_3^2 = (\sigma_1 \sigma_2 \sigma_3)^2
+    \end{equation}
+
+Suy ra:
+\begin{equation}
+        \det(\mathbf{W}) = (\sigma_1 \sigma_2 \sigma_3)^2
+    \end{equation}
+
+Vây:
+    \begin{equation}
+        \sqrt{\det(\mathbf{W})} = \sigma_1 \sigma_2 \sigma_3
+    \end{equation}
+
+
+\subsubsection{Chỉ số đẳng hướng}
+
+Các giá trị riêng của ma trận $\mathbf{W} = \mathbf{G}{\mathbf{G}}^T$ chính là \textbf{bình phương} các giá trị đơn của ma trận $\mathbf{G}$.
+\begin{equation}
+    \lambda_i(\mathbf{W}) = \sigma_i^2(\mathbf{G})
+\end{equation}
+Cụ thể:
+\begin{itemize}
+    \item $\lambda_{\max}(\mathbf{W}) = \sigma_{\max}^2(\mathbf{G}) = \sigma_1^2$
+    \item $\lambda_{\min}(\mathbf{W}) = \sigma_{\min}^2(\mathbf{G}) = \sigma_3^2$
+\end{itemize}
+
+Từ đó, ta có thể biểu diễn lại tỷ số của các giá trị riêng:
+\begin{equation}
+    \frac{\lambda_{\min}(\mathbf{W})}{\lambda_{\max}(\mathbf{W})} = \frac{\sigma_3^2}{\sigma_1^2} = \left(\frac{\sigma_3}{\sigma_1}\right)^2 = (J_I)^2
+\end{equation}
+Lấy căn bậc hai hai vế, ta thu được mối liên hệ chính xác giữa $J_I$ và các giá trị riêng:
+\begin{equation}
+    J_I = \sqrt{\frac{\lambda_{\min}(\mathbf{W})}{\lambda_{\max}(\mathbf{W})}}
+\end{equation}
+\subsubsection{Chỉ số Bán kính}
+
+
+
+\subsection{Cấu trúc Tối ưu của Ma trận Gram}
+
+
+\begin{theorem}[Cấu trúc Tối ưu của Ma trận Gram]
+Cho một ma trận Gram $W = GG^T \in \mathbb{R}^{3 \times 3}$ với trace cố định $\text{tr}(W) = c$. Trace của một ma trận chính là tổng các phần tử nằm trên đường chéo chính của ma trận đó. Giá trị tối ưu của các chỉ số chất lượng đạt được khi $W$ tỉ lệ với ma trận đơn vị:
+\begin{equation}
+W_{\text{opt}} = \frac{c}{3}I_3
+\end{equation}
+\end{theorem}
+
+\begin{proof}
+Ta có các bất đẳng thức giữa trung bình cộng và trung bình nhân:
+\begin{equation}
+\frac{\lambda_1 + \lambda_2 + \lambda_3}{3} \geq \sqrt[3]{\lambda_1 \lambda_2 \lambda_3}
+\end{equation}
+với đẳng thức xảy ra khi và chỉ khi $\lambda_1 = \lambda_2 = \lambda_3$.
+
+Với $\text{tr}(W) = \lambda_1 + \lambda_2 + \lambda_3 = c$ cố định:
+\begin{itemize}
+    \item Thể tích $\sqrt{\det(W)} = \sqrt{\lambda_1 \lambda_2 \lambda_3}$ đạt giá trị cực đại khi $\lambda_1 = \lambda_2 = \lambda_3 = \frac{c}{3}$.
+    \item Tính đẳng hướng $\frac{\lambda_{\min}}{\lambda_{\max}} = \frac{\lambda_3}{\lambda_1}$ đạt giá trị cực đại bằng 1 khi $\lambda_1 = \lambda_2 = \lambda_3$.
+    \item Bán kính $\sqrt{\lambda_{\min}} = \sqrt{\lambda_3}$ đạt giá trị cực đại khi $\lambda_3$ đạt giá trị cực đại, điều này xảy ra khi $\lambda_1 = \lambda_2 = \lambda_3 = \frac{c}{3}$.
+\end{itemize}
+
+Do đó, cấu trúc tối ưu của ma trận Gram là $W_{\text{opt}} = \frac{c}{3}I_3$.
+\end{proof}
+
+\section{Phân tích Chi tiết Ma trận Gram và Nguyên tắc Thiết kế}
+
+\subsection{Phân tích Dạng Chính tắc của Ma trận Gram}
+
+Để phân tích cấu trúc của ma trận Gram một cách chi tiết, ta đặt các ký hiệu sau để đơn giản hóa biểu thức 70 :
+\begin{align}
+C_1 &= \sum_i (n_{ix}A_i - n_{iy}B_i) \\
+C_2 &= \sum_i (n_{iy}A_i + n_{ix}B_i) \\
+D &= \sum_i (A_i^2 + B_i^2)
+\end{align}
+
+Ma trận Gram có thể viết lại:
+\begin{equation}
+W = \begin{bmatrix}
+n & 0 & C_1 \\
+0 & n & C_2 \\
+C_1 & C_2 & D
+\end{bmatrix}
+\end{equation}
+
+Định thức của ma trận này là:
+\begin{align}
+\det(W) &= n^2D - nC_1^2 - nC_2^2 \\
+&= n(nD - C_1^2 - C_2^2)
+\end{align}
+
+Các giá trị riêng của $W$ là nghiệm của phương trình đặc trưng:
+\begin{equation}
+\det(W - \lambda I) = 0
+\end{equation}
+
+Đa thức đặc trưng là:
+\begin{align}
+p(\lambda) &= (n - \lambda)^2(D - \lambda) - (n - \lambda)(C_1^2 + C_2^2)
+\end{align}
+
+\subsection{Điều kiện Ma trận Gram Tối ưu}
+
+Mục tiêu của chúng ta là tìm các điều kiện vật lý để ma trận Gram tổng quát $W$ có được dạng tối ưu $W_{\text{opt}}$. Ta sẽ làm điều này bằng cách so sánh trực tiếp từng phần tử của hai ma trận:
+\[
+    W = \begin{bmatrix} n & 0 & C_1 \\ 0 & n & C_2 \\ C_1 & C_2 & D \end{bmatrix} \quad \text{và} \quad W_{\text{opt}} = \begin{bmatrix} c/3 & 0 & 0 \\ 0 & c/3 & 0 \\ 0 & 0 & c/3 \end{bmatrix}
+\]
+
+
+\vspace{\topsep}
+Ta thấy, để ma trận Gram $W$ đạt cấu trúc tối ưu, các điều kiện sau phải được thỏa mãn đồng thời:
+\begin{enumerate}
+    \item \textbf{$C_1 = C_2 = 0$} (Tách biệt lực và moment)
+    \item \textbf{$D = n = \frac{c}{3}$} (Đa hướng)
+\end{enumerate}
+
+
+Điều kiện $C_1 = C_2 = 0$ có nghĩa là:
+\begin{align}
+\sum_i (n_{ix}A_i - n_{iy}B_i) &= 0 \\
+\sum_i (n_{iy}A_i + n_{ix}B_i) &= 0
+\end{align}
+
+Điều kiện $D = n$ có nghĩa là:
+\begin{align}
+\sum_i (A_i^2 + B_i^2) = \sum_i 1 = n
+\end{align}
+
+
+Hai điều kiện phức tạp $C_1=0$ và $C_2=0$. Tiến hành thay thế các định nghĩa của $A_i$ và $B_i$ vào công thức tính $C_1$ và $C_2$.
+
+Ta có $C_1 = \sum_i (n_{ix}A_i - n_{iy}B_i)$. Thay $A_i = r_{ix}n_{iy} - r_{iy}n_{ix}$ và $B_i = r_{ix}n_{ix} + r_{iy}n_{iy}$ vào, ta được:
+\begin{align*}
+    C_1 &= \sum_i \left[ n_{ix}(r_{ix}n_{iy} - r_{iy}n_{ix}) - n_{iy}(r_{ix}n_{ix} + r_{iy}n_{iy}) \right] \\
+        &= \sum_i \left[ r_{ix}n_{ix}n_{iy} - r_{iy}n_{ix}^2 - r_{ix}n_{iy}n_{ix} - r_{iy}n_{iy}^2 \right] \\
+        &= \sum_i \left[ -r_{iy}n_{ix}^2 - r_{iy}n_{iy}^2 \right] = \sum_i -r_{iy}(n_{ix}^2 + n_{iy}^2)
+\end{align*}
+Vì $n_{ix}^2 + n_{iy}^2 = \|n_i\|^2 = 1$, ta có $C_1 = \sum_i -r_{iy}$.\\
+Do đó, điều kiện $C_1 = 0$ tương đương với: $\mathbf{\sum_i r_{iy} = 0}$.
+
+Tương tự, ta có $C_2 = \sum_i (n_{iy}A_i + n_{ix}B_i)$. Thay thế và rút gọn:
+\begin{align*}
+    C_2 &= \sum_i \left[ n_{iy}(r_{ix}n_{iy} - r_{iy}n_{ix}) + n_{ix}(r_{ix}n_{ix} + r_{iy}n_{iy}) \right] \\
+        &= \sum_i \left[ r_{ix}n_{iy}^2 - r_{iy}n_{ix}n_{iy} + r_{ix}n_{ix}^2 + r_{iy}n_{ix}n_{iy} \right] \\
+        &= \sum_i \left[ r_{ix}n_{iy}^2 + r_{ix}n_{ix}^2 \right] = \sum_i r_{ix}(n_{iy}^2 + n_{ix}^2)
+\end{align*}
+Vì $n_{ix}^2 + n_{iy}^2 = 1$, ta có $C_2 = \sum_i r_{ix}$.\\
+Do đó, điều kiện $C_2 = 0$ tương đương với: $\mathbf{\sum_i r_{ix} = 0}$.
+
+Hai điều kiện tưởng chừng phức tạp đã được rút gọn thành:
+\begin{enumerate}
+    \item $\sum_i r_{ix} = 0$ (Tổng các tọa độ x của các điểm tiếp xúc bằng 0)
+    \item $\sum_i r_{iy} = 0$ (Tổng các tọa độ y của các điểm tiếp xúc bằng 0)
+\end{enumerate}
+
+Vì vậy, nguyên tắc thiết kế cuối cùng và chính xác nhất được suy ra là: \textbf{Để tách biệt hoàn toàn khả năng điều khiển lực và moment, tâm hình học của tập hợp các điểm tiếp xúc phải trùng với tâm khối lượng của vật.}
+
+
+
+Mục tiêu là làm cho ma trận Gram $W$ càng giống với ma trận tối ưu $W_{\text{opt}}$ càng tốt. Từ đó ta có thể định nghĩa một hàm chi phí $J$ để tối thiểu hóa
+
+
+
+\subsection{Xây dựng Hàm Mục tiêu Toàn diện}
+
+Cách này sẽ tạo ra một cầu nối trực tiếp và mượt mà từ lý thuyết sang phần code thực nghiệm.
+
+Dựa trên các phân tích toán học trong toàn bộ báo cáo, một hàm chi phí (cost function) tổng hợp $J$ được xây dựng để thuật toán tối ưu có thể tìm ra cấu hình đặt lực tốt nhất. Hàm $J$ này được tổng hợp từ các thành phần chi phí, mỗi thành phần tương ứng với một nguyên tắc thiết kế quan trọng. Mục tiêu của thuật toán là tìm cấu hình có tổng chi phí $J$ nhỏ nhất.
+
+\subsubsection{Ràng buộc Cứng: Điều kiện Ổn định}
+Đây không phải là một thành phần của hàm chi phí, mà là một điều kiện "sống còn". Bất kỳ cấu hình nào không thỏa mãn sẽ bị loại bỏ ngay lập tức (ví dụ: bằng cách gán chi phí là vô cùng lớn).
+
+\begin{itemize}
+    \item \textbf{Nguyên tắc:} Phải có khả năng tạo moment hai chiều.
+    \item \textbf{Điều kiện:} $\exists i, j : A_i \cdot A_j < 0$.
+\end{itemize}
+
+\subsubsection{Thành phần Chi phí Tách biệt và Đối xứng ($J_{\text{decoupling}}$)}
+Thành phần này dựa trên Nguyên tắc Tách biệt Lực và Moment.
+
+\begin{itemize}
+    \item \textbf{Mục tiêu:} Phạt các cấu hình $C_1 \neq 0$ hoặc $C_2 \neq 0$.
+    \item \textbf{Cơ sở toán học:} Dựa trên phân tích đã chứng minh $C_1 = -\sum r_{iy}$ và $C_2 = \sum r_{ix}$. Điều kiện $C_1 = C_2 = 0$ tương đương với việc tâm hình học của các điểm tiếp xúc phải trùng với tâm khối lượng.
+    \item \textbf{Công thức chi phí:}
+    \begin{equation}
+        J_{\text{decoupling}} = w_c \left( \left( \sum_i r_{ix} \right)^2 + \left( \sum_i r_{iy} \right)^2 \right)
+    \end{equation}
+    Thành phần này sẽ bằng 0 khi tâm hình học trùng với tâm khối lượng.
+\end{itemize}
+
+\subsubsection{Thành phần Chi phí Cân bằng Khoảng cách ($J_{\text{balance}}$)}
+Thành phần này dựa trên Nguyên tắc Cân bằng Khả năng Tạo Moment.
+
+\begin{itemize}
+    \item \textbf{Mục tiêu:} Phạt các cấu hình mà các điểm tiếp xúc có khoảng cách tới tâm không đồng đều.
+    \item \textbf{Cơ sở toán học:} Bắt nguồn từ điều kiện lý tưởng $D=n$ (hay $\sum \|r_i\|^2 = n$), vốn được thỏa mãn một cách cân bằng nhất khi tất cả các khoảng cách $\|r_i\|$ bằng nhau.
+    \item \textbf{Công thức chi phí:} Ta sẽ phạt sự chênh lệch (phương sai) của các khoảng cách so với khoảng cách trung bình $R_{\text{avg}}$.
+    \begin{equation}
+        J_{\text{balance}} = w_d \sum_{i=1}^{n} \left( \|r_i\| - R_{\text{avg}} \right)^2 \quad \text{với} \quad R_{\text{avg}} = \frac{1}{n} \sum_j \|r_j\|
+    \end{equation}
+    Thành phần này sẽ bằng 0 khi tất cả các điểm cách đều tâm khối lượng.
+\end{itemize}
+
+\subsubsection{Thành phần Chi phí Phân bố Hướng lực ($J_{\text{normals}}$)}
+Thành phần này dựa trên Nguyên tắc Phân bố Đều các Vector Pháp tuyến.
+
+\begin{itemize}
+    \item \textbf{Mục tiêu:} Phạt các cấu hình có hướng lực bị trùng lặp hoặc phân bố không đều, làm giảm khả năng di chuyển linh hoạt.
+    \item \textbf{Cơ sở toán học:} Tối thiểu hóa sự "giống nhau" giữa các vector pháp tuyến, được đo bằng tích vô hướng.
+    \item \textbf{Công thức chi phí:}
+    \begin{equation}
+        J_{\text{normals}} = w_n \sum_{i<j} \left( n_i \cdot n_j \right)^2
+    \end{equation}
+    Thành phần này sẽ tiến về 0 khi các vector pháp tuyến có xu hướng trực giao với nhau.
+\end{itemize}
+
+\subsubsection{Hàm Mục tiêu Toàn diện Cuối cùng}
+Kết hợp tất cả lại, hàm mục tiêu cuối cùng để thuật toán tối thiểu hóa là:
+\begin{equation}
+    J_{\text{total}} = J_{\text{decoupling}} + J_{\text{balance}} + J_{\text{normals}}
+\end{equation}
+
+
+ 
+
+
+\subsection{Mô hình bộ điều khiển PID}
+
+Với một cấu hình vật lý đã được lựa chọn theo các nguyên tắc ở Mục 5 và Mục 6, và đã được chứng minh là có khả năng ổn định tiệm cận theo Mục 3, chúng tôi thiết kế một bộ điều khiển PID để hiện thực hóa việc bám quỹ đạo. Mục tiêu của bộ điều khiển là đảm bảo sai số theo dõi hội tụ về không trong thời gian hữu hạn.
+
+Bộ điều khiển được thiết kế dựa trên mô hình sai số:
+\begin{equation}
+\dot{\mathbf{e}} = \dot{\mathbf{q}} - \dot{\mathcal{P}}(s(t)) = M'^{-1}\mathbf{w} - \dot{\mathcal{P}}(s(t))
+\end{equation}
+
+Bộ điều khiển wrench mong muốn PID được thiết kế có dạng:
+\begin{equation}
+\mathbf{w}_{desired}(t) = M'\dot{\mathcal{P}}(s(t)) - K_P\mathbf{e}(t) - K_I\int_{0}^{t}\mathbf{e}(\tau)d\tau - K_D\dot{\mathbf{e}}(t)
+\end{equation}
+
+Trong đó:
+\begin{itemize}
+    \item $\mathbf{e}(t) = \mathbf{q}(t) - \mathcal{P}(s(t))$ là vector sai số theo dõi
+    \item $K_P, K_I, K_D \in \mathbb{R}^{3 \times 3}$ là các ma trận xác định dương
+    \item $M'\dot{\mathcal{P}}(s(t))$ lỗi sai số phản hồi về.
+\end{itemize}
+
+Tuy nhiên, trong thực tế, các lực đẩy phải thỏa mãn ràng buộc friction cone và các điều kiện vật lý khác. Do đó, ta cần thực hiện chiếu wrench mong muốn vào không gian wrench khả thi:
+\begin{equation}
+\mathbf{w}^* = \text{proj}_{\mathcal{W}_f}(\mathbf{w}_{desired})
+\end{equation}
+
+Trong đó $\mathcal{W}_f$ là không gian wrench khả thi đã được định nghĩa.
+
+
+
+\end{document}
